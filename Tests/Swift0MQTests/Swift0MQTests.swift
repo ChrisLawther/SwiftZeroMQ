@@ -2,16 +2,28 @@ import XCTest
 @testable import Swift0MQ
 
 final class Swift0MQTests: XCTestCase {
-    func testCanCreateContext() throws {
-        // This is an example of a functional test case.
-        // Use XCTAssert and related functions to verify your tests produce the correct
-        // results.
+    func testCanReportCurrentVersion() {
+        let (major, minor, patch, versionString) = zmqVersion()
 
+        XCTAssertEqual(major, 4)
+        XCTAssertEqual(minor, 3)
+        XCTAssertEqual(patch, 2)
+        XCTAssertEqual(versionString, "4.3.2")
+    }
+
+    func testCanCreateContext() throws {
         let zmq: ZMQ? = try ZMQ()
         XCTAssertNotNil(zmq)
     }
 
-    func testCanSendRequests() throws {
+    func testCanCreateMultipleContexts() throws {
+        let zmq1: ZMQ? = try ZMQ()
+        let zmq2: ZMQ? = try ZMQ()
+        XCTAssertNotNil(zmq1)
+        XCTAssertNotNil(zmq2)
+    }
+
+    func testRequestSocketCanSendToReplySocket() throws {
         let zmq = try ZMQ()
 
         let requester = try zmq.socket(type: .request)
@@ -26,10 +38,29 @@ final class Swift0MQTests: XCTestCase {
             let msg = String(data: buffer, encoding: .utf8) ?? "😫"
             XCTAssertEqual(msg, "Hello")
         }
-
     }
 
-    static var allTests = [
-        ("testCanCreateContext", testCanCreateContext),
-    ]
+//    func testReplySocketCanSendToRequestSocket() throws {
+//        XCTFail("Not implemented")
+//    }
+//
+//    func testSubscriberCanSubscribeToPublisher() {
+//        XCTFail("Not implemented")
+//    }
+//
+//    func testPublisherCanBroadcastToAllSubscribers() {
+//        XCTFail("Not implemented")
+//    }
+//
+//    func testPublisherCanBroadcastToSubscribersToTopics() {
+//        XCTFail("Not implemented")
+//    }
+//
+//    func testPusherCanSendToPuller() {
+//        XCTFail("Not implemented")
+//    }
+
+//    static var allTests = [
+//        ("testCanCreateContext", testCanCreateContext),
+//    ]
 }

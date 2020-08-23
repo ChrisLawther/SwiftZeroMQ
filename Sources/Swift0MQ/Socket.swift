@@ -4,6 +4,16 @@ import CZeroMQ
 public class Socket {
     private var socket: UnsafeMutableRawPointer?
 
+
+    /// Attempts to create a new socket of the specified type
+    /// - Parameters:
+    ///   - context: The containing context
+    ///   - type: One of the supported socket types (req/rep, push/pull etc.)
+    /// - Throws: When it is not possible to create the socket, due to:
+    ///     * Invalid context
+    ///     * Invalid socket type
+    ///     * Maximum number of sockets already open
+    ///     * The context was terminated
     public init(context: UnsafeMutableRawPointer?, type: SocketType) throws {
         guard let socket =  zmq_socket(context, type.rawValue) else {
             throw ZMQError.lastError()
@@ -12,6 +22,8 @@ public class Socket {
         self.socket = socket
     }
 
+    /// Closes the socket
+    /// - Throws: If the socket was already NULL (can't happen)
     public func close() throws {
         guard let socket = socket else { return }
 
@@ -25,6 +37,20 @@ public class Socket {
         }
     }
 
+
+    /// Attempts to bind the socket to an endpoint.
+    ///
+    /// Endpoints can be of the form:
+    ///  * tcp://interface:portnumber (see `man zmq_tcp`)
+    ///  * ipc://whatever (see `man zmq_ipc`)
+    ///  * inproc - in-process (see `man zmq_inproc`)
+    ///
+    ///  For tcp connections, the interface should be one of:
+    ///  * * - wildcard meaning "all available interfaces"
+    ///  * The primary address (IPv4 or IPv6) of the interface, in *numeric* form
+    ///  * The non-portable interface name as defined by the operating system (e.g. "eth0")
+    /// - Parameter endpoint: The endpoint to bind to
+    /// - Throws: When binding fails, generally due to the port being in use, or the transport being invalid
     public func bind(to endpoint: String) throws {
         guard let socket = socket else {
             fatalError("Tried to bind a non-existant socket")
@@ -36,6 +62,19 @@ public class Socket {
         }
     }
 
+
+    /// Attempts to connect to the specified endpoint
+    ///
+    /// Endpoints can be of the form:
+    ///  * tcp://address:portnumber (see `man zmq_tcp`)
+    ///  * ipc://whatever (see `man zmq_ipc`)
+    ///  * inproc - in-process (see `man zmq_inproc`)
+    ///
+    ///  For tcp connections, the address should be one of:
+    ///  * The DNS name of the peer
+    ///  * The primary address (IPv4 or IPv6) of the interface, in *numeric* form
+    /// - Parameter endpoint: What to connect to
+    /// - Throws: When
     public func connect(to endpoint: String) throws {
         guard let socket = socket else {
             fatalError("Tried to connect from a non-existant socket")
@@ -47,6 +86,13 @@ public class Socket {
         }
     }
 
+
+    /// Attempts to send the provided data, applying the specified options
+    /// - Parameters:
+    ///   - data: The data to send
+    ///   - options: One of .none, .dontWait, .sendMore, .dontWaitSendMore
+    /// - Returns: A result confirming success or reporting any error
+    @discardableResult
     public func send(data: Data, options: SocketSendRecvOption) -> Result<Void, Error> {
         data.withUnsafeBytes { rawBufferPointer in
             let result = zmq_send(socket!, rawBufferPointer.baseAddress, data.count, options.rawValue)
@@ -59,6 +105,9 @@ public class Socket {
         }
     }
 
+    /// Attempts to receive data of the specified size
+    /// - Parameter size: The expected byte count
+    /// - Returns: A result containing either the received data or and error describing any failure
     public func receive(size: Int) -> Result<Data, Error> {
         let buffer = UnsafeMutablePointer<CChar>.allocate(capacity: size)
         defer { buffer.deallocate() }
@@ -77,64 +126,6 @@ public class Socket {
             try close()
         } catch {
             print(error)
-        }
-    }
-}
-
-public enum SocketType: Int32 {
-    case request
-    case reply
-    case router
-    case dealer
-
-    case publish
-    case subscribe
-    case xpublish
-    case xsubscribe
-
-    case push
-    case pull
-
-    case pair
-
-    case stream
-
-    public var rawValue: Int32 {
-        switch self {
-        case .request:  return ZMQ_REQ
-        case .reply:    return ZMQ_REP
-        case .router:   return ZMQ_ROUTER
-        case .dealer:   return ZMQ_DEALER
-
-        case .publish:  return ZMQ_PUB
-        case .subscribe: return ZMQ_SUB
-        case .xpublish: return ZMQ_XPUB
-        case .xsubscribe: return ZMQ_XSUB
-
-        case .push:     return ZMQ_PUSH
-        case .pull:     return ZMQ_PULL
-
-        case .pair:     return ZMQ_PAIR
-
-        case .stream:   return ZMQ_STREAM
-        }
-    }
-}
-
-public enum SocketSendRecvOption: Int32 {
-    case none
-    case dontWait
-    case sendMore
-    case dontWaitSendMore
-
-    // Looks pointless, but `#define`d values aren't visible to `case xxx = whatever`
-    // whereas they are visible in this context:
-    public var rawValue: Int32 {
-        switch self {
-            case .none: return 0
-            case .dontWait: return ZMQ_DONTWAIT
-            case .sendMore: return ZMQ_SNDMORE
-            case .dontWaitSendMore: return ZMQ_DONTWAIT | ZMQ_SNDMORE
         }
     }
 }
