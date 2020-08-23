@@ -108,17 +108,33 @@ public class Socket {
     /// Attempts to receive data of the specified size
     /// - Parameter size: The expected byte count
     /// - Returns: A result containing either the received data or and error describing any failure
-    public func receive(size: Int) -> Result<Data, Error> {
+    public func receive(size: Int, options: SocketSendRecvOption = .none) -> Result<Data, Error> {
         let buffer = UnsafeMutablePointer<CChar>.allocate(capacity: size)
         defer { buffer.deallocate() }
 
-        let received = zmq_recv(socket!, buffer, size, 0)
+        let received = zmq_recv(socket!, buffer, size, options.rawValue)
 
         if received == -1 {
             return .failure(ZMQError.lastError())
         }
 
         return .success(Data(bytes: buffer, count: Int(received)))
+    }
+
+    public func subscribe(to topic: String = "") throws {
+        guard let socket = socket else {
+            fatalError("Tried to connect from a non-existant socket")
+        }
+
+        guard let bytes = topic.data(using: .utf8) else {
+            return
+        }
+        let result = bytes.withUnsafeBytes { unsafeRawBufferPointer in
+            return zmq_setsockopt(socket, ZMQ_SUBSCRIBE, unsafeRawBufferPointer.baseAddress, bytes.count)
+        }
+        if result == -1 {
+            throw ZMQError.lastError()
+        }
     }
 
     deinit {

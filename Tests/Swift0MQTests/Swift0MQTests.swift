@@ -24,80 +24,91 @@ final class Swift0MQTests: XCTestCase {
     }
 
     func testRequestSocketCanSendToReplySocket() throws {
-        let (ctx, requester, replier) = try contextWithRequestReplyPair()
+        try withRequestReplyPair { requester, replier in
+            _ = requester.send(data: "Hello".data(using: .utf8)!, options: .none)
 
-        _ = requester.send(data: "Hello".data(using: .utf8)!, options: .none)
-
-        let buffer = try replier.receive(size: 10).get()
-        let msg = String(data: buffer, encoding: .utf8) ?? "😫"
-        XCTAssertEqual(msg, "Hello")
+            let buffer = try replier.receive(size: 10).get()
+            let msg = String(data: buffer, encoding: .utf8) ?? "😫"
+            XCTAssertEqual(msg, "Hello")
+        }
     }
 
     // It's not so much "cannot" as "blocks until"
     func xtestRequestSocketCannotSendToReplySocketWithPendingResponse() throws {
-        let (ctx, requester, replier) = try contextWithRequestReplyPair()
+        try withRequestReplyPair { requester, replier in
+            _ = requester.send(data: "Hello".data(using: .utf8)!, options: .none)
 
-        _ = requester.send(data: "Hello".data(using: .utf8)!, options: .none)
-
-        XCTAssertThrowsError({
-            try requester.send(data: "Hello".data(using: .utf8)!, options: .none).get()
-        })
+            XCTAssertThrowsError({
+                try requester.send(data: "Hello".data(using: .utf8)!, options: .none).get()
+            })
+        }
     }
 
     func xtestReplyingBeforeThereWasARequestFails() throws {
-        let (ctx, requester, replier) = try contextWithRequestReplyPair()
-
-        XCTAssertThrowsError({
-            try replier.send(data: "Hi there!".data(using: .utf8)!, options: .none).get()
-            try replier.send(data: "Hi there!".data(using: .utf8)!, options: .none).get()
-        })
+        try withRequestReplyPair { requester, replier in
+            XCTAssertThrowsError({
+                try replier.send(data: "Hi there!".data(using: .utf8)!, options: .none).get()
+                try replier.send(data: "Hi there!".data(using: .utf8)!, options: .none).get()
+            })
+        }
     }
 
     func testReplySocketCanRespondToRequestSocket() throws {
-        let (ctx, requester, responder) = try contextWithRequestReplyPair()
+        try withRequestReplyPair { requester, replier in
+            _ = requester.send(data: "Hello".data(using: .utf8)!, options: .none)
+            _ = try replier.receive(size: 10).get()   // The message needs to be read before the response can be sent
+            _ = replier.send(data: "Hi there!".data(using: .utf8)!, options: .none)
 
-        _ = requester.send(data: "Hello".data(using: .utf8)!, options: .none)
-        _ = try responder.receive(size: 10).get()   // The message needs to be read before the response can be sent
-        _ = responder.send(data: "Hi there!".data(using: .utf8)!, options: .none)
+            let buffer = try requester.receive(size: 10).get()
+            let msg = String(data: buffer, encoding: .utf8) ?? "😫"
+            XCTAssertEqual(msg, "Hi there!")
+        }
+    }
 
-        let buffer = try requester.receive(size: 10).get()
-        let msg = String(data: buffer, encoding: .utf8) ?? "😫"
-        XCTAssertEqual(msg, "Hi there!")
+    func testSubscriberCanSubscribeToAllTopicsOnPublisher() throws {
+        try withPubSubPair { publisher, subscriber in
+            try subscriber.subscribe()
+
+            publisher.send(data: "message".data(using: .utf8)!, options: .none)
+
+            let buffer = try subscriber.receive(size: 10, options: .dontWait).get()
+            let msg = String(bytes: buffer, encoding: .utf8) ?? "😫"
+
+            XCTAssertEqual(msg, "message")
+        }
+    }
+
+    // ZeroMQ "topic"s are just the suffix (any length) of the message
+    func testSubscriberCanSubscribeToSpecificTopicOnPublisher() throws {
+        try withPubSubPair { publisher, subscriber in
+            try subscriber.subscribe(to: "niche.")
+
+            publisher.send(data: "message".data(using: .utf8)!, options: .none)
+            publisher.send(data: "niche.message".data(using: .utf8)!, options: .none)
+
+            let buffer = try subscriber.receive(size: 20, options: .dontWait).get()
+            let msg = String(bytes: buffer, encoding: .utf8) ?? "😫"
+
+            XCTAssertEqual(msg, "niche.message")
+
+        }
     }
 //
-//    func testSubscriberCanSubscribeToPublisher() {
+//    func testPublisherCanBroadcastToAllSubscribers() throws {
 //        XCTFail("Not implemented")
 //    }
 //
-//    func testPublisherCanBroadcastToAllSubscribers() {
-//        XCTFail("Not implemented")
-//    }
-//
-//    func testPublisherCanBroadcastToSubscribersToTopics() {
+//    func testPublisherCanBroadcastToSubscribersToTopics() throws {
 //        XCTFail("Not implemented")
 //    }
 //
     func testPusherCanSendToPuller() throws {
-        let (ctx, pusher, puller) = try contextWithPushPull()
-
-        for _ in 1...10 {
-            _ = pusher.send(data: "Hello".data(using: .utf8)!, options: .dontWait)
-            _ = try puller.receive(size: 10).get()
+        try withPushPullPair { pusher, puller in
+            for _ in 1...10 {
+                _ = pusher.send(data: "Hello".data(using: .utf8)!, options: .dontWait)
+                _ = try puller.receive(size: 10).get()
+            }
         }
-
-        try ctx.shutdown()
-    }
-
-    // W-a-y faster
-    func testInProcPusherCanSendToPuller() throws {
-        let (ctx, pusher, puller) = try contextWithInProcPushPull()
-
-        for _ in 1...10000 {
-            _ = pusher.send(data: "Hello".data(using: .utf8)!, options: .dontWait)
-            _ = try puller.receive(size: 10).get()
-        }
-
-        try ctx.shutdown()
     }
 
 //    static var allTests = [
@@ -106,34 +117,37 @@ final class Swift0MQTests: XCTestCase {
 }
 
 private extension Swift0MQTests {
-    func contextWithRequestReplyPair() throws -> (ZMQ, Socket, Socket) {
-        return try contextAndPairWithTypes(first: .request, second: .reply)
+
+    func withPubSubPair(_ block: (Socket, Socket) throws -> Void) throws {
+        let (ctx, subscriber, publisher) = try contextAndPairWithTypes(first: .subscribe, second: .publish)
+        try block(publisher, subscriber)
+        try ctx.shutdown()
     }
 
-    func contextWithPushPull() throws -> (ZMQ, Socket, Socket) {
-        return try contextAndPairWithTypes(first: .push, second: .pull)
+    func withRequestReplyPair(_ block: (Socket, Socket) throws -> Void) throws {
+        let (ctx, first, second) = try contextAndPairWithTypes(first: .request, second: .reply)
+
+        try block(first, second)
+
+        try ctx.shutdown()
     }
 
-    func contextWithInProcPushPull() throws -> (ZMQ, Socket, Socket) {
-        let zmq = try ZMQ()
+    func withPushPullPair(_ block: (Socket, Socket) throws -> Void) throws {
+        let (ctx, first, second) = try contextAndPairWithTypes(first: .push, second: .pull)
 
-        let socketA = try zmq.socket(type: .push)
-        _ = try socketA.connect(to: "inproc://testing")
+        try block(first, second)
 
-        let socketB = try zmq.socket(type: .pull)
-        _ = try socketB.bind(to: "inproc://testing")
-
-        return (zmq, socketA, socketB)
+        try ctx.shutdown()
     }
 
     private func contextAndPairWithTypes(first: SocketType, second: SocketType) throws -> (ZMQ, Socket, Socket) {
         let zmq = try ZMQ()
 
         let socketA = try zmq.socket(type: first)
-        _ = try socketA.connect(to: "tcp://localhost:6666")
+        _ = try socketA.connect(to: "inproc://testing")
 
         let socketB = try zmq.socket(type: second)
-        _ = try socketB.bind(to: "tcp://*:6666")
+        _ = try socketB.bind(to: "inproc://testing")
 
         return (zmq, socketA, socketB)
     }
