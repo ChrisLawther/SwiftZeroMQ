@@ -15,7 +15,7 @@ public final class ZMQ {
 
     public init() throws {
         guard let context = zmq_ctx_new() else {
-            throw ZMQError.lastError
+            throw ZMQError.lastError()
         }
 
         self.context = context
@@ -31,7 +31,7 @@ public final class ZMQ {
         let result = zmq_ctx_shutdown(context)
 
         if result == -1 {
-            throw ZMQError.lastError
+            throw ZMQError.lastError()
         } else {
             // Success
             self.context = nil

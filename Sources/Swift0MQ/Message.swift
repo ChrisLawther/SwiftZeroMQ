@@ -8,7 +8,7 @@ final class Message {
         message = zmq_msg_t()
 
         if zmq_msg_init(&message) == -1 {
-            throw ZMQError.lastError
+            throw ZMQError.lastError()
         }
     }
 
@@ -16,7 +16,7 @@ final class Message {
         message = zmq_msg_t()
 
         if zmq_msg_init_size(&message, size) == -1 {
-            throw ZMQError.lastError
+            throw ZMQError.lastError()
         }
     }
 
@@ -27,7 +27,7 @@ final class Message {
         message = zmq_msg_t()
 
         if zmq_msg_init_data(&message, data, size, ffn, hint) == -1 {
-            throw ZMQError.lastError
+            throw ZMQError.lastError()
         }
     }
 
@@ -35,7 +35,7 @@ final class Message {
         message = zmq_msg_t()
 
         if zmq_msg_init_data(&message, data, size, nil, nil) == -1 {
-            throw ZMQError.lastError
+            throw ZMQError.lastError()
         }
     }
 }

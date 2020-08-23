@@ -6,7 +6,7 @@ public class Socket {
 
     public init(context: UnsafeMutableRawPointer?, type: SocketType) throws {
         guard let socket =  zmq_socket(context, type.rawValue) else {
-            throw ZMQError.lastError
+            throw ZMQError.lastError()
         }
 
         self.socket = socket
@@ -18,7 +18,7 @@ public class Socket {
         let result = zmq_close(socket)
 
         if result == -1 {
-            throw ZMQError.lastError
+            throw ZMQError.lastError()
         } else {
             // Success
             self.socket = nil
@@ -32,7 +32,7 @@ public class Socket {
         let result = zmq_bind(socket, endpoint)
 
         if result == -1 {
-            throw ZMQError.lastError
+            throw ZMQError.lastError()
         }
     }
 
@@ -43,7 +43,7 @@ public class Socket {
         let result = zmq_connect(socket, endpoint)
 
         if result == -1 {
-            throw ZMQError.lastError
+            throw ZMQError.lastError()
         }
     }
 
@@ -52,7 +52,7 @@ public class Socket {
             let result = zmq_send(socket!, rawBufferPointer.baseAddress, data.count, options.rawValue)
 
             if result == -1 {
-                return .failure(ZMQError.lastError)
+                return .failure(ZMQError.lastError())
             }
 
             return .success(())
@@ -66,7 +66,7 @@ public class Socket {
         let received = zmq_recv(socket!, buffer, size, 0)
 
         if received == -1 {
-            return .failure(ZMQError.lastError)
+            return .failure(ZMQError.lastError())
         }
 
         return .success(Data(bytes: buffer, count: Int(received)))
