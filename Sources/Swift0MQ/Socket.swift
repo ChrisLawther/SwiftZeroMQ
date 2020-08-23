@@ -43,7 +43,7 @@ public class Socket {
     /// Endpoints can be of the form:
     ///  * tcp://interface:portnumber (see `man zmq_tcp`)
     ///  * ipc://whatever (see `man zmq_ipc`)
-    ///  * inproc - in-process (see `man zmq_inproc`)
+    ///  * inproc://somename - in-process (see `man zmq_inproc`)
     ///
     ///  For tcp connections, the interface should be one of:
     ///  * * - wildcard meaning "all available interfaces"
@@ -68,7 +68,7 @@ public class Socket {
     /// Endpoints can be of the form:
     ///  * tcp://address:portnumber (see `man zmq_tcp`)
     ///  * ipc://whatever (see `man zmq_ipc`)
-    ///  * inproc - in-process (see `man zmq_inproc`)
+    ///  * inproc://somename - in-process (see `man zmq_inproc`)
     ///
     ///  For tcp connections, the address should be one of:
     ///  * The DNS name of the peer
