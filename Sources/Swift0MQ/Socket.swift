@@ -93,7 +93,7 @@ public class Socket {
     ///   - options: One of .none, .dontWait, .sendMore, .dontWaitSendMore
     /// - Returns: A result confirming success or reporting any error
     @discardableResult
-    public func send(data: Data, options: SocketSendRecvOption) -> Result<Void, Error> {
+    public func send(_ data: Data, options: SocketSendRecvOption) -> Result<Void, Error> {
         data.withUnsafeBytes { rawBufferPointer in
             let result = zmq_send(socket!, rawBufferPointer.baseAddress, data.count, options.rawValue)
 
@@ -103,6 +103,14 @@ public class Socket {
 
             return .success(())
         }
+    }
+    
+    public func send(_ string: String, options: SocketSendRecvOption) -> Result<Void, Error> {
+        guard let data = string.data(using: .utf8) else {
+            return .failure(ZMQError.stringCouldNotBeEncoded(string))
+        }
+
+        return send(data, options: options)
     }
 
     /// Attempts to receive data of the specified size
