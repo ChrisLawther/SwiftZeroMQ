@@ -2,7 +2,7 @@ import Foundation
 import CZeroMQ
 
 public class Socket {
-    private var socket: UnsafeMutableRawPointer?
+    internal var socket: UnsafeMutableRawPointer?
 
 
     /// Attempts to create a new socket of the specified type
@@ -93,7 +93,7 @@ public class Socket {
     ///   - options: One of .none, .dontWait, .sendMore, .dontWaitSendMore
     /// - Returns: A result confirming success or reporting any error
     @discardableResult
-    public func send(_ data: Data, options: SocketSendRecvOption) -> Result<Void, Error> {
+    public func send(_ data: Data, options: SocketSendRecvOption = .none) -> Result<Void, Error> {
         data.withUnsafeBytes { rawBufferPointer in
             let result = zmq_send(socket!, rawBufferPointer.baseAddress, data.count, options.rawValue)
 
@@ -105,7 +105,7 @@ public class Socket {
         }
     }
     
-    public func send(_ string: String, options: SocketSendRecvOption) -> Result<Void, Error> {
+    public func send(_ string: String, options: SocketSendRecvOption = .none) -> Result<Void, Error> {
         guard let data = string.data(using: .utf8) else {
             return .failure(ZMQError.stringCouldNotBeEncoded(string))
         }
@@ -127,6 +127,47 @@ public class Socket {
         }
 
         return .success(Data(bytes: buffer, count: Int(received)))
+    }
+
+    struct ZmqError: Error {
+        let errNo: Int32
+    }
+
+    /// Receive all parts of a message, returning the result as [Data]
+    /// - Parameter options:
+    /// - Returns:
+    public func receive() -> Result<[Data], Error> {
+        var more: Int = 1
+        var moreSize = MemoryLayout<Int>.size
+        var msg = zmq_msg_t()
+
+        defer { zmq_msg_close(&msg) }
+
+        guard zmq_msg_init(&msg) == 0 else {
+            return .failure(ZmqError(errNo: errno))
+        }
+
+        var parts = [Data]()
+
+        while more != 0 {
+            guard zmq_msg_recv(&msg, socket, 0) != -1 else {
+                return .failure(ZmqError(errNo: errno))
+            }
+
+            guard let buffer = zmq_msg_data(&msg) else {
+                return .failure(ZmqError(errNo: errno))
+            }
+            let size = zmq_msg_size(&msg)
+
+            let part = Data(bytes: buffer, count: size)
+            parts.append(part)
+
+            if zmq_getsockopt(socket, ZMQ_RCVMORE, &more, &moreSize) != 0 {
+                return .failure(ZmqError(errNo: errno))
+            }
+        }
+
+        return .success(parts)
     }
 
     public func subscribe(to topic: String = "") throws {

@@ -1,18 +1,21 @@
 import Foundation
 import CZeroMQ
 
-
 /// Called by zmq when it is done with the buffer backing a message
 /// - Parameters:
 ///   - pointer: Pointer to the buffer to be freed
 ///   - hint: Caller-provided hint (not required in Swift, but passed anyway)
-fileprivate func free(pointer: UnsafeMutableRawPointer?, hint: UnsafeMutableRawPointer?) -> Void {
+fileprivate func free(pointer: UnsafeMutableRawPointer?,
+                      hint: UnsafeMutableRawPointer?) -> Void {
     pointer?.deallocate()
 }
 
 public final class Message {
     private var message: zmq_msg_t
 
+
+    /// Initializes an empty message, ready to receive inbound message data into
+    /// - Throws: <#description#>
     init() throws {
         message = zmq_msg_t()
 
@@ -21,14 +24,12 @@ public final class Message {
         }
     }
 
-    init(size: Int) throws {
-        message = zmq_msg_t()
 
-        if zmq_msg_init_size(&message, size) == -1 {
-            throw ZMQError.lastError()
-        }
-    }
-
+    /// Initializes a message with data copied from the provided String
+    /// - Parameters:
+    ///   - string: The String to use
+    ///   - encoding: The encoding of the string (defaults to utf8)
+    /// - Throws: If the string could not be encoded as data using the specified encoding
     public convenience init(_ string: String, encoding: String.Encoding = .utf8) throws {
         guard let data = string.data(using: encoding) else {
             throw ZMQError.stringCouldNotBeEncoded(string)
@@ -36,6 +37,10 @@ public final class Message {
         try self.init(data)
     }
 
+
+    /// Initializes a message with a copy of the provided data, with it's deallocation correctly registered
+    /// - Parameter data: The data
+    /// - Throws: If the message could not be initialized
     public init(_ data: Data) throws {
         let byteCount = data.count
 
@@ -52,42 +57,35 @@ public final class Message {
         }
     }
 
-    @available(*, deprecated, message: "The init implementations taking String or Data are your friends")
-    public init(data: UnsafeMutableRawPointer,
-                size: Int,
-                hint: UnsafeMutableRawPointer? = nil,
-                ffn: @escaping @convention(c) (UnsafeMutableRawPointer?, UnsafeMutableRawPointer?) -> Void) throws {
-        message = zmq_msg_t()
-
-        if zmq_msg_init_data(&message, data, size, ffn, hint) == -1 {
-            throw ZMQError.lastError()
-        }
-    }
-
-    public init(data: UnsafeMutableRawPointer, size: Int) throws {
-        message = zmq_msg_t()
-
-        if zmq_msg_init_data(&message, data, size, nil, nil) == -1 {
-            throw ZMQError.lastError()
-        }
-    }
-
     deinit {
         zmq_msg_close(&message)
     }
 
+    @available(*, deprecated, message: "Use `getData` to get a copy")
     public var data: UnsafeMutableRawPointer {
         return zmq_msg_data(&message)
     }
 
+    @available(*, deprecated, message: "Use `getData` to get a copy")
     public var size: Int {
         return zmq_msg_size(&message)
+    }
+
+    public func getData() -> Data? {
+        guard let ptr = zmq_msg_data(&message) else {
+            return nil
+        }
+
+        let size = zmq_msg_size(&message)
+
+        return Data(bytes: ptr, count: size)
     }
 }
 
 public extension Message {
-    func toString(encoding: String.Encoding = .utf8) -> String? {
-        let data = Data(bytes: self.data, count: self.size)
+    func asString(encoding: String.Encoding = .utf8) -> String? {
+        guard let data = getData() else { return nil }
+        
         return String(data: data, encoding:encoding)
     }
 
