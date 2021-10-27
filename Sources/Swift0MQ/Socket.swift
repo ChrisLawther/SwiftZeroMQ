@@ -1,9 +1,12 @@
 import Foundation
 import CZeroMQ
 
+// TO-DO: We really want a way of returning typed-sockets, that only expose functionality
+//        appropriate for the socket type
+//        (e.g. a publisher can't subscribe, a push can't pull etc.)
+
 public class Socket {
     internal var socket: UnsafeMutableRawPointer?
-
 
     /// Attempts to create a new socket of the specified type
     /// - Parameters:
@@ -37,7 +40,6 @@ public class Socket {
         }
     }
 
-
     /// Attempts to bind the socket to an endpoint.
     ///
     /// Endpoints can be of the form:
@@ -62,7 +64,6 @@ public class Socket {
         }
     }
 
-
     /// Attempts to connect to the specified endpoint
     ///
     /// Endpoints can be of the form:
@@ -85,7 +86,6 @@ public class Socket {
             throw ZMQError.lastError()
         }
     }
-
 
     /// Attempts to send the provided data, applying the specified options
     /// - Parameters:

@@ -7,8 +7,8 @@ final class Swift0MQTests: XCTestCase {
 
         XCTAssertEqual(major, 4)
         XCTAssertEqual(minor, 3)
-        XCTAssertEqual(patch, 2)
-        XCTAssertEqual(versionString, "4.3.2")
+        XCTAssertEqual(patch, 4)
+        XCTAssertEqual(versionString, "4.3.4")
     }
 
     func testCanCreateContext() throws {
