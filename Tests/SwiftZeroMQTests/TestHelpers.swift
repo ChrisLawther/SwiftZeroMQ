@@ -1,5 +1,4 @@
-import Swift0MQ
-
+import SwiftZeroMQ
 
 /// Runs the provided block with a Pub/Sub socket pair
 /// - Parameter block: The block to run

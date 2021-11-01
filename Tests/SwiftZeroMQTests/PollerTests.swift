@@ -1,5 +1,5 @@
 import XCTest
-@testable import Swift0MQ
+@testable import SwiftZeroMQ
 
 final class PollerTests: XCTestCase {
 
