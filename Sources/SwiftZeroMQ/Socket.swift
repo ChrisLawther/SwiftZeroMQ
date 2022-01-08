@@ -53,11 +53,11 @@ public class Socket {
     ///  * The non-portable interface name as defined by the operating system (e.g. "eth0")
     /// - Parameter endpoint: The endpoint to bind to
     /// - Throws: When binding fails, generally due to the port being in use, or the transport being invalid
-    public func bind(to endpoint: String) throws {
+    public func bind(to endpoint: Endpoint) throws {
         guard let socket = socket else {
             fatalError("Tried to bind a non-existant socket")
         }
-        let result = zmq_bind(socket, endpoint)
+        let result = zmq_bind(socket, endpoint.path)
 
         if result == -1 {
             throw ZMQError.lastError()
@@ -76,11 +76,11 @@ public class Socket {
     ///  * The primary address (IPv4 or IPv6) of the interface, in *numeric* form
     /// - Parameter endpoint: What to connect to
     /// - Throws: When
-    public func connect(to endpoint: String) throws {
+    public func connect(to endpoint: Endpoint) throws {
         guard let socket = socket else {
             fatalError("Tried to connect from a non-existant socket")
         }
-        let result = zmq_connect(socket, endpoint)
+        let result = zmq_connect(socket, endpoint.path)
 
         if result == -1 {
             throw ZMQError.lastError()
