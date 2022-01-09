@@ -137,7 +137,7 @@ public class Socket {
             return .failure(ZmqError(errNo: errno))
         }
 
-        guard zmq_msg_recv(&msg, socket, 0) != -1 else {
+        guard zmq_msg_recv(&msg, socket, options.rawValue) != -1 else {
             return .failure(ZmqError(errNo: errno))
         }
 
