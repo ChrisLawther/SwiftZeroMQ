@@ -6,7 +6,7 @@ import CZeroMQ
 //        (e.g. a publisher can't subscribe, a push can't pull etc.)
 
 public class Socket {
-    internal var socket: UnsafeMutableRawPointer?
+    var socket: UnsafeMutableRawPointer?
 
     /// Attempts to create a new socket of the specified type
     /// - Parameters:
@@ -25,9 +25,17 @@ public class Socket {
         self.socket = socket
     }
 
+    deinit {
+        do {
+            try close()
+        } catch {
+            print(error)
+        }
+    }
+
     /// Closes the socket
-    /// - Throws: If the socket was already NULL (can't happen)
-    public func close() throws {
+    /// - Throws: If the socket was already NULL (can't happen?)
+    func close() throws {
         guard let socket = socket else { return }
 
         let result = zmq_close(socket)
@@ -104,14 +112,6 @@ public class Socket {
             return .success(())
         }
     }
-    
-    public func send(_ string: String, options: SocketSendRecvOption = .none) -> Result<Void, Error> {
-        guard let data = string.data(using: .utf8) else {
-            return .failure(ZMQError.stringCouldNotBeEncoded(string))
-        }
-
-        return send(data, options: options)
-    }
 
     /// Attempts to receive data of the specified size
     /// - Parameter size: The expected byte count
@@ -185,12 +185,26 @@ public class Socket {
             throw ZMQError.lastError()
         }
     }
+}
 
-    deinit {
-        do {
-            try close()
-        } catch {
-            print(error)
+// MARK: - String conveniences
+extension Socket {
+    @discardableResult
+    public func send(_ string: String, options: SocketSendRecvOption = .none) -> Result<Void, Error> {
+        guard let data = string.data(using: .utf8) else {
+            return .failure(ZMQError.stringCouldNotBeEncoded(string))
+        }
+
+        return send(data, options: options)
+    }
+
+    @discardableResult
+    public func receive(size: Int, options: SocketSendRecvOption = .none) -> Result<String, Error> {
+        return receive(size: size, options: options).flatMap { (data: Data) in
+            guard let msg = String(data: data, encoding: .utf8) else {
+                return .failure(ZMQError.invalidUTF8String)
+            }
+            return .success(msg)
         }
     }
 }

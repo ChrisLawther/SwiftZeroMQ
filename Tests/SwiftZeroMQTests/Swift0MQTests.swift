@@ -25,10 +25,9 @@ final class Swift0MQTests: XCTestCase {
 
     func testRequestSocketCanSendToReplySocket() throws {
         try withRequestReplyPair { requester, replier in
-            _ = requester.send("Hello".data(using: .utf8)!, options: .none)
+            _ = requester.send("Hello", options: .none)
 
-            let buffer = try replier.receive(size: 10).get()
-            let msg = String(data: buffer, encoding: .utf8) ?? "😫"
+            let msg: String = try replier.receive(size: 10).get()
             XCTAssertEqual(msg, "Hello")
         }
     }
@@ -36,10 +35,10 @@ final class Swift0MQTests: XCTestCase {
     // It's not so much "cannot" as "blocks until"
     func xtestRequestSocketCannotSendToReplySocketWithPendingResponse() throws {
         try withRequestReplyPair { requester, replier in
-            _ = requester.send("Hello".data(using: .utf8)!, options: .none)
+            _ = requester.send("Hello", options: .none)
 
             XCTAssertThrowsError({
-                try requester.send("Hello".data(using: .utf8)!, options: .none).get()
+                try requester.send("Hello", options: .none).get()
             })
         }
     }
@@ -47,20 +46,19 @@ final class Swift0MQTests: XCTestCase {
     func xtestReplyingBeforeThereWasARequestFails() throws {
         try withRequestReplyPair { requester, replier in
             XCTAssertThrowsError({
-                try replier.send("Hi there!".data(using: .utf8)!, options: .none).get()
-                try replier.send("Hi there!".data(using: .utf8)!, options: .none).get()
+                try replier.send("Hi there!", options: .none).get()
+                try replier.send("Hi there!", options: .none).get()
             })
         }
     }
 
     func testReplySocketCanRespondToRequestSocket() throws {
         try withRequestReplyPair { requester, replier in
-            _ = requester.send("Hello".data(using: .utf8)!, options: .none)
-            _ = try replier.receive(size: 10).get()   // The message needs to be read before the response can be sent
-            _ = replier.send("Hi there!".data(using: .utf8)!, options: .none)
+            _ = requester.send("Hello", options: .none)
+            let response: Data = try replier.receive(size: 10).get()   // The message needs to be read before the response can be sent
+            _ = replier.send("Hi there!", options: .none)
 
-            let buffer = try requester.receive(size: 10).get()
-            let msg = String(data: buffer, encoding: .utf8) ?? "😫"
+            let msg: String = try requester.receive(size: 10).get()
             XCTAssertEqual(msg, "Hi there!")
         }
     }
@@ -69,10 +67,9 @@ final class Swift0MQTests: XCTestCase {
         try withPubSubPair { publisher, subscriber in
             try subscriber.subscribe()
 
-            publisher.send("message".data(using: .utf8)!, options: .none)
+            publisher.send("message", options: .none)
 
-            let buffer = try subscriber.receive(size: 10, options: .dontWait).get()
-            let msg = String(bytes: buffer, encoding: .utf8) ?? "😫"
+            let msg: String = try subscriber.receive(size: 10, options: .dontWait).get()
 
             XCTAssertEqual(msg, "message")
         }
@@ -84,10 +81,9 @@ final class Swift0MQTests: XCTestCase {
             try subscriber.subscribe(to: "niche.")
 
             publisher.send("message".data(using: .utf8)!, options: .none)
-            publisher.send("niche.message".data(using: .utf8)!, options: .none)
+            publisher.send("niche.message", options: .none)
 
-            let buffer = try subscriber.receive(size: 20, options: .dontWait).get()
-            let msg = String(bytes: buffer, encoding: .utf8) ?? "😫"
+            let msg: String = try subscriber.receive(size: 20, options: .dontWait).get()
 
             XCTAssertEqual(msg, "niche.message")
 
@@ -106,7 +102,7 @@ final class Swift0MQTests: XCTestCase {
         try withPushPullPair { pusher, puller in
             for _ in 1...10 {
                 _ = pusher.send("Hello".data(using: .utf8)!, options: .dontWait)
-                _ = try puller.receive(size: 10).get()
+                let response: Data = try puller.receive(size: 10).get()
             }
         }
     }
@@ -115,10 +111,9 @@ final class Swift0MQTests: XCTestCase {
     func testDealerCanSendToRouter() throws {
         try with(.dealer, and: .router) { dealer, router in
             for _ in 1...10 {
-                _ = dealer.send("Hello".data(using: .utf8)!, options: .dontWait)
-                let client = try router.receive(size: 10).get()
-                let data = try router.receive(size: 10).get()
-                let str = String(data: data, encoding: .utf8) ?? "fail"
+                _ = dealer.send("Hello", options: .dontWait)
+                let client: Data = try router.receive(size: 10).get()
+                let str: String = try router.receive(size: 10).get()
                 print("Router received: '\(str)' from '\(client.hexEncodedString())'")
             }
         }
@@ -131,9 +126,9 @@ final class Swift0MQTests: XCTestCase {
         //        where the first part is the router's "address"
         try with(.dealer, and: .router) { dealer, router in
             for _ in 1...10 {
-                _ = dealer.send("Hello".data(using: .utf8)!, options: .dontWait)
-                let client = try router.receive(size: 10).get()
-                let data = try router.receive(size: 10).get()
+                _ = dealer.send("Hello", options: .dontWait)
+                let client: Data = try router.receive(size: 10).get()
+                let data: Data = try router.receive(size: 10).get()
 
                 router.send(client, options: .sendMore)
                 router.send(Data(data.reversed()), options: .dontWait)

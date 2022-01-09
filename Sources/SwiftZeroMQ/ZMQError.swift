@@ -4,6 +4,7 @@ import CZeroMQ
 enum ZMQError: Error {
 
     case stringCouldNotBeEncoded(String)
+    case invalidUTF8String
 
     case other(description: String)
 
@@ -19,6 +20,8 @@ extension ZMQError: CustomStringConvertible {
         switch self {
         case .stringCouldNotBeEncoded(let string):
             return "Could not encode '\(string)' as data"
+        case .invalidUTF8String:
+            return "Data did not represent a valid UTF8 string"
         case .other(description: let description):
             return description
         }

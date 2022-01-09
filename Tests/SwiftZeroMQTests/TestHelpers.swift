@@ -46,10 +46,10 @@ private func contextAndPairWithTypes(first: SocketType, second: SocketType) thro
     let zmq = try ZMQ()
 
     let socketA = try zmq.socket(type: first)
-    _ = try socketA.connect(to: "inproc://testing")
+    _ = try socketA.connect(to: .inproc(name: "testing"))
 
     let socketB = try zmq.socket(type: second)
-    _ = try socketB.bind(to: "inproc://testing")
+    _ = try socketB.bind(to: .inproc(name: "testing"))
 
     return (zmq, socketA, socketB)
 }
