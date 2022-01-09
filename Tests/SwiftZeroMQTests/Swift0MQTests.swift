@@ -112,8 +112,8 @@ final class Swift0MQTests: XCTestCase {
         try with(.dealer, and: .router) { dealer, router in
             for _ in 1...10 {
                 _ = dealer.send("Hello", options: .dontWait)
-                let client: Data = try router.receive(size: 10).get()
-                let str: String = try router.receive(size: 10).get()
+                let client: Data = try router.receiveMessage().get()
+                let str: String = try router.receiveMessage().get()
                 print("Router received: '\(str)' from '\(client.hexEncodedString())'")
             }
         }

@@ -129,6 +129,26 @@ public class Socket {
         return .success(Data(bytes: buffer, count: Int(received)))
     }
 
+    public func receiveMessage(options: SocketSendRecvOption = .none) -> Result<Data, Error> {
+        var msg = zmq_msg_t()
+        defer { zmq_msg_close(&msg) }
+
+        guard zmq_msg_init(&msg) == 0 else {
+            return .failure(ZmqError(errNo: errno))
+        }
+
+        guard zmq_msg_recv(&msg, socket, 0) != -1 else {
+            return .failure(ZmqError(errNo: errno))
+        }
+
+        guard let buffer = zmq_msg_data(&msg) else {
+            return .failure(ZmqError(errNo: errno))
+        }
+        let size = zmq_msg_size(&msg)
+
+        return .success(Data(bytes: buffer, count: size))
+    }
+
     struct ZmqError: Error {
         let errNo: Int32
     }
@@ -198,9 +218,17 @@ extension Socket {
         return send(data, options: options)
     }
 
-    @discardableResult
     public func receive(size: Int, options: SocketSendRecvOption = .none) -> Result<String, Error> {
         return receive(size: size, options: options).flatMap { (data: Data) in
+            guard let msg = String(data: data, encoding: .utf8) else {
+                return .failure(ZMQError.invalidUTF8String)
+            }
+            return .success(msg)
+        }
+    }
+
+    public func receiveMessage(options: SocketSendRecvOption = .none) -> Result<String, Error> {
+        return receiveMessage(options: options).flatMap { (data: Data) in
             guard let msg = String(data: data, encoding: .utf8) else {
                 return .failure(ZMQError.invalidUTF8String)
             }
