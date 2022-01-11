@@ -10,16 +10,6 @@ public func zmqVersion() -> (major: Int, minor: Int, patch: Int, versionString: 
     return (Int(major), Int(minor), Int(patch), versionString)
 }
 
-public protocol Worker {
-    func async(_ block: @escaping () -> Void)
-}
-
-extension DispatchQueue: Worker {
-    public func async(_ block: @escaping () -> Void) {
-        async(execute: block)
-    }
-}
-
 public final class ZMQ {
     private var context: UnsafeMutableRawPointer?
     private let worker: Worker

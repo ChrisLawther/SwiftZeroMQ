@@ -235,4 +235,16 @@ extension Socket {
             return .success(msg)
         }
     }
+
+    public func receiveMessage(options: SocketSendRecvOption = .none) -> Result<[String], Error> {
+        receive().flatMap { messages in
+            print("🧐 Received \(messages.count) Data messages")
+
+            let strings = messages.compactMap { msg in
+                String(data: msg, encoding: .utf8)
+            }
+
+            return .success(strings)
+        }
+    }
 }

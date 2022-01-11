@@ -13,7 +13,6 @@ fileprivate func free(pointer: UnsafeMutableRawPointer?,
 public final class Message {
     private var message: zmq_msg_t
 
-
     /// Initializes an empty message, ready to receive inbound message data into
     /// - Throws: <#description#>
     init() throws {
@@ -23,7 +22,6 @@ public final class Message {
             throw ZMQError.lastError()
         }
     }
-
 
     /// Initializes a message with data copied from the provided String
     /// - Parameters:
@@ -36,7 +34,6 @@ public final class Message {
         }
         try self.init(data)
     }
-
 
     /// Initializes a message with a copy of the provided data, with it's deallocation correctly registered
     /// - Parameter data: The data
