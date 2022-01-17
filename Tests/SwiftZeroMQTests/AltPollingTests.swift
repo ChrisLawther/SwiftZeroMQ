@@ -5,7 +5,7 @@ final class AltPollerTests: XCTestCase {
 
     func testASocketReceivingDataBecomesReadable() throws {
         try withPushPullPair { pusher, puller in
-            let sut = Wibble()
+            var sut: Wibble? = Wibble()
 
             var expectedMessageCount = 3
 
@@ -15,7 +15,10 @@ final class AltPollerTests: XCTestCase {
                 _ = pusher.send("Hello \(idx)", options: .dontWait)
             }
 
-            sut.poll(socket: puller, flags: .pollIn) { socket in
+            // Q. Given we've pushed N messages in, why do we only
+            //    seem able to read them out 1 at a time?
+
+            sut?.poll(socket: puller, flags: .pollIn) { socket in
                 let messages: [String]? = try? socket.receiveMessage().get()
                 for msg in messages ?? [] {
                     print("🔖 \(msg)")
@@ -28,6 +31,16 @@ final class AltPollerTests: XCTestCase {
             }
 
             wait(for: [becameReadable], timeout: 5)
+
+            // TODO: Make shutdown block?
+            sut?.shutdown()
+
+            weak var ref = sut
+            sut = nil
+
+            sleep(2)
+
+            XCTAssertNil(ref)
         }
     }
 }

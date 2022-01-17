@@ -1,10 +1,6 @@
 import Foundation
 import CZeroMQ
 
-// TO-DO: We really want a way of returning typed-sockets, that only expose functionality
-//        appropriate for the socket type
-//        (e.g. a publisher can't subscribe, a push can't pull etc.)
-
 public class Socket {
     var socket: UnsafeMutableRawPointer?
 
@@ -48,6 +44,10 @@ public class Socket {
         }
     }
 
+}
+
+// MARK: - Bindable socket
+extension Socket: BindableSocket {
     /// Attempts to bind the socket to an endpoint.
     ///
     /// Endpoints can be of the form:
@@ -72,6 +72,11 @@ public class Socket {
         }
     }
 
+}
+
+// MARK: - Connectable socket
+extension Socket: ConnectableSocket {
+
     /// Attempts to connect to the specified endpoint
     ///
     /// Endpoints can be of the form:
@@ -94,22 +99,36 @@ public class Socket {
             throw ZMQError.lastError()
         }
     }
+}
+
+extension Socket {
 
     /// Attempts to send the provided data, applying the specified options
     /// - Parameters:
     ///   - data: The data to send
     ///   - options: One of .none, .dontWait, .sendMore, .dontWaitSendMore
     /// - Returns: A result confirming success or reporting any error
+//    @discardableResult
+//    public func send(_ data: Data, options: SocketSendRecvOption = .none) -> Result<Void, Error> {
+//        data.withUnsafeBytes { rawBufferPointer in
+//            let result = zmq_send(socket!, rawBufferPointer.baseAddress, data.count, options.rawValue)
+//
+//            if result == -1 {
+//                return .failure(ZMQError.lastError())
+//            }
+//
+//            return .success(())
+//        }
+//    }
+
     @discardableResult
-    public func send(_ data: Data, options: SocketSendRecvOption = .none) -> Result<Void, Error> {
-        data.withUnsafeBytes { rawBufferPointer in
+    func send(_ data: Data, options: SocketSendRecvOption) throws -> Void {
+        try data.withUnsafeBytes { rawBufferPointer in
             let result = zmq_send(socket!, rawBufferPointer.baseAddress, data.count, options.rawValue)
 
             if result == -1 {
-                return .failure(ZMQError.lastError())
+                throw ZMQError.lastError()
             }
-
-            return .success(())
         }
     }
 
@@ -182,6 +201,8 @@ public class Socket {
             let part = Data(bytes: buffer, count: size)
             parts.append(part)
 
+            // Are there more parts to *this* message?
+            // (*not* are there more messages)
             if zmq_getsockopt(socket, ZMQ_RCVMORE, &more, &moreSize) != 0 {
                 return .failure(ZmqError(errNo: errno))
             }
@@ -189,7 +210,10 @@ public class Socket {
 
         return .success(parts)
     }
+}
 
+// MARK: Publisher / subscriber sockets
+extension Socket: SubscriberSocket {
     public func subscribe(to topic: String = "") throws {
         guard let socket = socket else {
             fatalError("Tried to connect from a non-existant socket")
@@ -203,6 +227,49 @@ public class Socket {
         }
         if result == -1 {
             throw ZMQError.lastError()
+        }
+    }
+}
+
+// MARK: Addressable socket - router sockets
+extension Socket: AddressableSocket {
+    public func receiveMessage() throws -> (Address, Data) {
+        var msg = zmq_msg_t()
+        defer { zmq_msg_close(&msg) }
+
+        guard zmq_msg_init(&msg) == 0 else {
+            throw ZmqError(errNo: errno)
+        }
+
+        guard zmq_msg_recv(&msg, socket, SocketSendRecvOption.none.rawValue) != -1 else {
+            throw ZmqError(errNo: errno)
+        }
+
+        guard let buffer = zmq_msg_data(&msg) else {
+            throw ZmqError(errNo: errno)
+        }
+
+        var size = zmq_msg_size(&msg)
+        let address = Address(sender: Data(bytes: buffer, count: size))
+
+        guard zmq_msg_recv(&msg, socket, SocketSendRecvOption.none.rawValue) != -1 else {
+            throw ZmqError(errNo: errno)
+        }
+
+        guard let buffer = zmq_msg_data(&msg) else {
+            throw ZmqError(errNo: errno)
+        }
+
+        size = zmq_msg_size(&msg)
+        let data = Data(bytes: buffer, count: size)
+
+        return (address, data)
+    }
+
+    public func sendMessage(to address: Address, data: Data) throws {
+        do {
+            try send(address.sender, options: .dontWaitSendMore)
+            try send(data, options: .dontWait)
         }
     }
 }

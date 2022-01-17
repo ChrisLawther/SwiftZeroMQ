@@ -2,9 +2,13 @@ import Foundation
 import CZeroMQ
 
 public enum SocketSendRecvOption: Int32 {
+    /// Blocking, only (or final) message part
     case none
+    /// Non-blocking, only (or final) message part
     case dontWait
+    /// Blocking, more parts to follow
     case sendMore
+    /// Non-blocking, more parts to follow
     case dontWaitSendMore
 
     // Looks pointless, but `#define`d values aren't visible to `case xxx = whatever`

@@ -84,7 +84,7 @@ class Wibble {
         guard !toPoll.isEmpty else {
             print("🧐 Nothing to poll. Sleeping")
 
-            sleep(1)
+            usleep(100000)
             return
         }
         var pollItems = toPoll.map {

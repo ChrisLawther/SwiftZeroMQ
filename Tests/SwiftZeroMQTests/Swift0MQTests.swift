@@ -80,8 +80,8 @@ final class Swift0MQTests: XCTestCase {
         try withPubSubPair { publisher, subscriber in
             try subscriber.subscribe(to: "niche.")
 
-            publisher.send("message".data(using: .utf8)!, options: .none)
-            publisher.send("niche.message", options: .none)
+            _ = publisher.send("message".data(using: .utf8)!, options: .none)
+            _ = publisher.send("niche.message", options: .none)
 
             let msg: String = try subscriber.receive(size: 20, options: .dontWait).get()
 
@@ -127,11 +127,16 @@ final class Swift0MQTests: XCTestCase {
         try with(.dealer, and: .router) { dealer, router in
             for _ in 1...10 {
                 _ = dealer.send("Hello", options: .dontWait)
-                let client: Data = try router.receive(size: 10).get()
-                let data: Data = try router.receive(size: 10).get()
+//                let client: Data = try router.receive(size: 10).get()
+//                let data: Data = try router.receive(size: 10).get()
+                let received = try router.receive().get()
 
-                router.send(client, options: .sendMore)
-                router.send(Data(data.reversed()), options: .dontWait)
+                guard received.count == 2 else { return XCTFail() }
+                let client = received[0]
+                let data = received[1]
+
+                _ = router.send(client, options: .sendMore)
+                _ = router.send(Data(data.reversed()), options: .dontWait)
 
                 let reply = try dealer.receive().get()
                 XCTAssertEqual(reply.count, 1)

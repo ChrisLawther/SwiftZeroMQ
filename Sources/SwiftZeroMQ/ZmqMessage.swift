@@ -10,7 +10,7 @@ fileprivate func free(pointer: UnsafeMutableRawPointer?,
     pointer?.deallocate()
 }
 
-public final class Message {
+public final class ZmqMessage {
     private var message: zmq_msg_t
 
     /// Initializes an empty message, ready to receive inbound message data into
@@ -79,22 +79,22 @@ public final class Message {
     }
 }
 
-public extension Message {
+public extension ZmqMessage {
     func asString(encoding: String.Encoding = .utf8) -> String? {
         guard let data = getData() else { return nil }
         
         return String(data: data, encoding:encoding)
     }
 
-    static func from(string: String, encoding: String.Encoding = .utf8) -> Message? {
+    static func from(string: String, encoding: String.Encoding = .utf8) -> ZmqMessage? {
         return string.asZmqMessage(encoding: encoding)
     }
 }
 
 public extension String {
-    func asZmqMessage(encoding: String.Encoding = .utf8) -> Message? {
+    func asZmqMessage(encoding: String.Encoding = .utf8) -> ZmqMessage? {
         guard let data = self.data(using:encoding) else { return nil }
 
-        return try? Message(data)
+        return try? ZmqMessage(data)
     }
 }
