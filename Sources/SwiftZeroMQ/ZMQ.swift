@@ -20,13 +20,44 @@ public final class ZMQ {
         }
 
         self.worker = worker
-
         self.context = context
     }
 
-    public func socket(type: SocketType) throws -> Socket {
-        return try Socket(context: self.context, type: type)
+    // MARK: - Req/rep
+    public func requestSocket()  throws -> RequestSocket {
+        return try Socket(context: context, type: .request)
     }
+
+    public func replySocket()  throws -> ReplySocket {
+        return try Socket(context: context, type: .reply)
+    }
+
+    // MARK: - Pub/sub
+    public func publisherSocket()  throws -> WriteableSocket {
+        return try Socket(context: context, type: .publish)
+    }
+
+    public func subscriberSocket()  throws -> SubscriberSocket {
+        return try Socket(context: context, type: .subscribe)
+    }
+//
+//    // MARK: - Push/pull
+//    func pushSocket()  throws -> WriteableSocket {
+//        return try Socket(context: context, type: .push)
+//    }
+//
+//    func pullSocket()  throws -> ReadableSocket {
+//        return try Socket(context: context, type: .pull)
+//    }
+//
+//    // MARK: - Dealer/router
+//    func dealerSocket() throws -> WriteableSocket {
+//        return try Socket(context: context, type: .dealer)
+//    }
+//
+//    func routerSocket() throws -> AddressableSocket  {
+//        return try Socket(context: context, type: .router)
+//    }
 
     public func shutdown() throws {
         guard let context = context else { return }

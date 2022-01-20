@@ -1,8 +1,7 @@
 import Foundation
 import CZeroMQ
 
-// TODO - Internal only?
-public enum SocketType: Int32 {
+enum SocketType: Int32 {
     case request
     case reply
     case router
