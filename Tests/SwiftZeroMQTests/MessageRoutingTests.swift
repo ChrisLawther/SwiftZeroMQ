@@ -31,6 +31,20 @@ final class MessageRoutingTests: XCTestCase {
         wait(for: [messageWasRouted], timeout: 1)
     }
 
+    func testDecodingHandleIsCalledWhenRecognisedTypeIsReceived() throws {
+        let messageWasRouted = expectation(description: "Message should have been routed")
+
+        try replier.on() { (message: String) in
+            XCTAssertEqual(message, "Hello!")
+            messageWasRouted.fulfill()
+        }
+
+        try requester.send(["GREETINGXX", "Hello!"])
+
+        wait(for: [messageWasRouted], timeout: 1)
+
+    }
+
     func testWhenMultipleHandlerAreRegistered_CorrectHandlerIsCalled() throws {
         
     }

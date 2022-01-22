@@ -36,3 +36,13 @@ public struct IdentifiedStringMessage: IdentifiableMessage {
         self.parts = parts
     }
 }
+
+public protocol MessageIdentifiable: DataInitialisable {
+    static var identifier: String { get }
+}
+
+public extension MessageIdentifiable {
+    static var identifier: String { String(describing: self) }
+}
+
+extension String: MessageIdentifiable {}

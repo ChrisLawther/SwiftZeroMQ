@@ -47,6 +47,13 @@ extension ReadableSocket {
         }
         on(data, handler: handler)
     }
+
+    public func on<T: MessageIdentifiable>(_ type: T.Type = T.self, handler: @escaping (T) -> Void) throws -> Void {
+        try on(type.identifier) { data in
+            let message = T.init(data[0])
+            handler(message)
+        }
+    }
 }
 
 public protocol WriteableSocket: ConnectableSocket, BindableSocket {
