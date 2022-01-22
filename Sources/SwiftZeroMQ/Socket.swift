@@ -26,16 +26,26 @@ protocol SocketCommon {
 
 public protocol ReadableSocket: ConnectableSocket, BindableSocket {
     func receiveMessage(options: SocketSendRecvOption) throws -> Data
+    func receiveMultipartMessage() throws -> [Data]
+    func on(_ identifier: Data, handler: @escaping ([Data]) -> Void)
+    func on(flags: PollingFlags, handler: @escaping (Socket) -> Void)
 }
 
 extension ReadableSocket {
-    public func receiveMessage(options: SocketSendRecvOption = .none) throws -> String {
+    public func receiveStringMessage(options: SocketSendRecvOption = .none) throws -> String {
         let data = try receiveMessage(options: options)
 
         guard let message = String(data: data, encoding: .utf8) else {
             throw ZMQError.invalidUTF8String
         }
         return message
+    }
+
+    public func on(_ identifier: String, handler: @escaping ([Data]) -> Void) throws {
+        guard let data = identifier.data(using: .utf8) else {
+            throw ZMQError.stringCouldNotBeEncoded(identifier)
+        }
+        on(data, handler: handler)
     }
 }
 
@@ -46,11 +56,30 @@ public protocol WriteableSocket: ConnectableSocket, BindableSocket {
 }
 
 extension WriteableSocket {
+    public func send(_ data: [Data]) throws -> Void {
+        for packet in data[0..<(data.count-1)] {
+            try send(packet, options: .dontWaitSendMore)
+        }
+        if let final = data.last {
+            try send(final, options: .dontWait)
+        }
+    }
+
     public func send(_ message: String, options: SocketSendRecvOption = .none) throws -> Void {
         guard let data = message.data(using: .utf8) else {
             throw ZMQError.stringCouldNotBeEncoded(message)
         }
         try send(data, options: options)
+    }
+
+    public func send(_ fragments: [String]) throws -> Void {
+        let packets = try fragments.map { fragment -> Data in
+            guard let data = fragment.data(using: .utf8) else {
+                throw ZMQError.stringCouldNotBeEncoded(fragment)
+            }
+            return data
+        }
+        try send(packets)
     }
 }
 
@@ -76,21 +105,14 @@ struct ZmqError: Error, LocalizedError {
 
 public class Socket {
     var socket: UnsafeMutableRawPointer?
+    let context: ZMQ
 
     /// Attempts to create a new socket of the specified type
     /// - Parameters:
-    ///   - context: The containing context
-    ///   - type: One of the supported socket types (req/rep, push/pull etc.)
-    /// - Throws: When it is not possible to create the socket, due to:
-    ///     * Invalid context
-    ///     * Invalid socket type
-    ///     * Maximum number of sockets already open
-    ///     * The context was terminated
-    init(context: UnsafeMutableRawPointer?, type: SocketType) throws {
-        guard let socket =  zmq_socket(context, type.rawValue) else {
-            throw ZMQError.lastError()
-        }
-
+    ///   - zmq: The parent context
+    ///   - socket: The underlying zmq socket
+    init(zmq: ZMQ, socket: UnsafeMutableRawPointer) {
+        self.context = zmq
         self.socket = socket
     }
 
@@ -121,6 +143,15 @@ public class Socket {
 // MARK: - ReadableSocket
 
 extension Socket: ReadableSocket {
+    // Polling
+    public func on(flags: PollingFlags, handler: @escaping (Socket) -> Void) {
+        context.on(flags, for: self, handler: handler)
+    }
+    // Identifiable message routing
+    public func on(_ identifier: Data, handler: @escaping ([Data]) -> Void) {
+        context.on(identifier, from: self, handler: handler)
+    }
+
     public func receiveMessage(options: SocketSendRecvOption) throws -> Data {
         var msg = zmq_msg_t()
         defer { zmq_msg_close(&msg) }
@@ -139,6 +170,41 @@ extension Socket: ReadableSocket {
         let size = zmq_msg_size(&msg)
 
         return Data(bytes: buffer, count: size)
+    }
+
+    public func receiveMultipartMessage() throws -> [Data] {
+        var msg = zmq_msg_t()
+        defer { zmq_msg_close(&msg) }
+
+        guard zmq_msg_init(&msg) == 0 else {
+            throw ZmqError(errNo: errno)
+        }
+
+        var more = 1
+        var moreSize = MemoryLayout<Int>.size
+        var parts = [Data]()
+
+        while more != 0 {
+            guard zmq_msg_recv(&msg, socket, 0) != -1 else {
+                throw ZmqError(errNo: errno)
+            }
+
+            guard let buffer = zmq_msg_data(&msg) else {
+                throw ZmqError(errNo: errno)
+            }
+            let size = zmq_msg_size(&msg)
+
+            let part = Data(bytes: buffer, count: size)
+            parts.append(part)
+
+            // Are there more parts to *this* message?
+            // (*not* are there more messages)
+            if zmq_getsockopt(socket, ZMQ_RCVMORE, &more, &moreSize) != 0 {
+                throw ZmqError(errNo: errno)
+            }
+        }
+
+        return parts
     }
 }
 

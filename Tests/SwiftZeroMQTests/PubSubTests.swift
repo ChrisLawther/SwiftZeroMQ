@@ -20,7 +20,7 @@ final class PubSubTests: XCTestCase {
 
         try publisher.send("message", options: .none)
 
-        let received: String = try subscriber.receiveMessage(options: .none)
+        let received = try subscriber.receiveStringMessage()
 
         XCTAssertEqual(received, "message")
     }
@@ -32,7 +32,7 @@ final class PubSubTests: XCTestCase {
         try publisher.send("foo.message", options: .none)
         try publisher.send("bar.message", options: .none)
 
-        let received: String = try subscriber.receiveMessage(options: .none)
+        let received = try subscriber.receiveStringMessage()
 
         XCTAssertEqual(received, "foo.message")
     }
@@ -48,8 +48,8 @@ final class PubSubTests: XCTestCase {
         try publisher.send("bar.message", options: .none)
 
         do {
-            let msg1: String = try subscriber.receiveMessage(options: .dontWait)
-            let msg2: String = try subscriber2.receiveMessage(options: .dontWait)
+            let msg1 = try subscriber.receiveStringMessage()
+            let msg2 = try subscriber2.receiveStringMessage()
 
             XCTAssertEqual(msg1, "foo.message")
             XCTAssertEqual(msg2, "bar.message")

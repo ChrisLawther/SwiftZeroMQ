@@ -1,15 +1,6 @@
 import Foundation
 import CZeroMQ
 
-public protocol Worker {
-    func async(_ block: @escaping () -> Void)
-}
-
-extension DispatchQueue: Worker {
-    public func async(_ block: @escaping () -> Void) {
-        async(execute: block)
-    }
-}
 
 // Q. Should polling for activity and routing of messages to recipients
 //    be handled by a single class, or two layers?

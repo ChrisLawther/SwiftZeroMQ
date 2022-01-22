@@ -17,7 +17,7 @@ final class ReqRepTests: XCTestCase {
 
     func testRequesterCanSendToReplier() throws {
         try requester.send("Hello", options: .none)
-        let msg: String = try replier.receiveMessage(options: .none)
+        let msg = try replier.receiveStringMessage(options: .none)
         XCTAssertEqual(msg, "Hello")
     }
 
@@ -27,7 +27,28 @@ final class ReqRepTests: XCTestCase {
 
         try replier.send("response", options: .none)
 
-        let msg: String = try requester.receiveMessage(options: .none)
+        let msg = try requester.receiveStringMessage(options: .none)
         XCTAssertEqual(msg, "response")
+    }
+
+    func testCanSendMultipartMessages() throws {
+        try requester.send(["Hello", "There"])
+        let received = try replier.receiveMultipartMessage()
+
+        XCTAssertEqual(received.count, 2)
+        XCTAssertEqual(received.first, "Hello".data(using: .utf8))
+        XCTAssertEqual(received.dropFirst().first, "There".data(using: .utf8))
+    }
+
+    func testReplierCanPollForRequests() throws {
+//        let msg = IdentifiedStringMessage(["Hello"])
+//        replier.on(
+//        try requester.send("Hello", options: .none)
+//        var _: Data = try replier.receiveMessage(options: .none)
+
+    }
+
+    func testRequesterCanPollForReplies() throws {
+
     }
 }
