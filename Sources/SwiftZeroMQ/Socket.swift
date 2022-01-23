@@ -279,6 +279,16 @@ extension Socket: SubscriberSocket {
     }
 }
 
+extension Socket: Hashable {
+    public static func == (lhs: Socket, rhs: Socket) -> Bool {
+        return lhs.socket == rhs.socket
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(ObjectIdentifier(self).hashValue)
+    }
+}
+
 //
 //
 //// MARK: - Bindable socket
