@@ -7,7 +7,7 @@ final class SocketPollerTests: XCTestCase {
     var replier: ReplySocket!
 
     override func setUpWithError() throws {
-        ctx = try ZMQ()
+        ctx = try ZMQ.standard()
         requester = try ctx.requestSocket()
         replier = try ctx.replySocket()
 

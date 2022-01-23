@@ -32,20 +32,44 @@ class MessageRouter {
     }
 
     func on(identifier: Data, from socket: Socket, handler: MessageHandler?) {
-        poller.poll(socket: socket, flags: .pollIn) { socket in
-            do {
-                // Right now this cares-not what the identifier was.
-                // If the socket was readable, the handler from the most
-                // recent call to .on() gets called
-                let multipart = try socket.receiveMultipartMessage()
-                try handler?(Array(multipart.dropFirst()))
-            } catch {
-                let idStr = String(data: identifier, encoding: .utf8) ?? identifier.prefix(8).map {
-                    String(format: "%02hhx", $0)
-                }.joined() + "..."
+        let receiver = ReceiverIdentifier(identifier: identifier, socket: socket)
+        handlers[receiver] = handler
 
-                os_log("Failed to route message id '%{public}@': %{public}@", log: .messageRouting, type: .info, idStr, error.localizedDescription)
+        guard handler != nil else {
+            // TODO: - Stop polling a socket once all message handlers for that socket
+            //         have been removed
+            print("🧐 Message router DE-registering")
+            return
+        }
+
+        print("🧐 Message router registering socket for polling")
+        poller.poll(socket: socket, flags: .pollIn) { [weak self] socket in
+            try? self?.handleReadable(socket: socket)
+        }
+    }
+
+    private func handleReadable(socket: Socket) throws {
+        print("🧐 Message router reading socket")
+        let multipart = try socket.receiveMultipartMessage()
+
+        guard !multipart.isEmpty else {
+            print("Ignoring empty message")
+            return
+        }
+        let identifier = multipart[0]
+        let handlerKey = ReceiverIdentifier(identifier: identifier, socket: socket)
+        do {
+            guard let handler = handlers[handlerKey] else {
+                return
             }
+            try handler(Array(multipart.dropFirst()))
+            print("🧐 Message router called handler successfully")
+        } catch {
+            let idStr = String(data: identifier, encoding: .utf8) ?? identifier.prefix(8).map {
+                String(format: "%02hhx", $0)
+            }.joined() + "..."
+
+            os_log("Failed to route message id '%{public}@': %{public}@", log: .messageRouting, type: .info, idStr, error.localizedDescription)
         }
     }
 }

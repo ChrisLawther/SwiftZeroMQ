@@ -15,15 +15,22 @@ public final class ZMQ {
     private let poller: SocketPoller
     private let router: MessageRouter
 
-    public init(worker: Worker = DispatchQueue.global(qos: .utility)) throws {
+    public static func standard() throws -> ZMQ {
+        let worker = DispatchQueue.global(qos: .utility)
+        let poller = SocketPoller(worker: worker)
+        let router = MessageRouter(poller: poller)
+        return try ZMQ(poller: poller, router: router)
+    }
+
+    init(poller: SocketPoller, router: MessageRouter) throws {
         guard let context = zmq_ctx_new() else {
             throw ZMQError.lastError()
         }
 
         self.context = context
 
-        poller = SocketPoller(worker: worker)
-        router = MessageRouter(poller: poller)
+        self.poller = poller
+        self.router = router
     }
 
     private func makeSocket(type: SocketType) throws -> Socket {
@@ -73,12 +80,14 @@ public final class ZMQ {
     public func on(_ identifier: Data,
                    from socket: Socket,
                    handler: @escaping ([Data]) -> Void) {
+        print("🧐 Context registering socket for identified response")
         router.on(identifier: identifier, from: socket, handler: handler)
     }
 
     public func on(_ flags: PollingFlags,
                    for socket: Socket,
                    handler: @escaping (Socket) -> Void) {
+        print("🧐 Context registering socket for polling")
         poller.poll(socket: socket, flags: flags, handler: handler)
     }
 

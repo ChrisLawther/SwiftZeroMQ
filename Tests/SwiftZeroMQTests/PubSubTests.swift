@@ -7,7 +7,7 @@ final class PubSubTests: XCTestCase {
     var subscriber: SubscriberSocket!
 
     override func setUpWithError() throws {
-        ctx = try ZMQ()
+        ctx = try ZMQ.standard()
         publisher = try ctx.publisherSocket()
         subscriber = try ctx.subscriberSocket()
 
