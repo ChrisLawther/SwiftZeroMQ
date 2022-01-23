@@ -92,6 +92,8 @@ extension WriteableSocket {
 
 public typealias RequestSocket = ReadableSocket & WriteableSocket
 public typealias ReplySocket = ReadableSocket & WriteableSocket
+public typealias DealerSocket = ReadableSocket & WriteableSocket
+public typealias RouterSocket = ReadableSocket & AddressableSocket
 
 public protocol SubscriberSocket: ReadableSocket {
     func subscribe(to: String) throws
@@ -276,6 +278,19 @@ extension Socket: SubscriberSocket {
         if result == -1 {
             throw ZMQError.lastError()
         }
+    }
+}
+
+extension Socket: AddressableSocket {
+    public func receiveMessage() throws -> (Address, Data) {
+        let data: [Data] = try receiveMultipartMessage()
+//        print("RX: \(data.count) parts")
+        // Q. Should the payload be data.dropFirst() ?
+        return (Address(sender: data[0]), data[1])
+    }
+
+    public func sendMessage(to address: Address, data: Data) throws {
+        try send([address.sender, data])
     }
 }
 

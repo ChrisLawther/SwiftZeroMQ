@@ -57,25 +57,24 @@ public final class ZMQ {
     public func subscriberSocket()  throws -> SubscriberSocket {
         return try makeSocket(type: .subscribe)
     }
-//
-//    // MARK: - Push/pull
-//    func pushSocket()  throws -> WriteableSocket {
-//        return try makeSocket(type: .push)
-//    }
-//
-//    func pullSocket()  throws -> ReadableSocket {
-//        return try makeSocket(type: .pull)
-//    }
-//
-//    // MARK: - Dealer/router
-//    func dealerSocket() throws -> WriteableSocket {
-//        return try makeSocket(type: .dealer)
-//    }
-//
-//    func routerSocket() throws -> AddressableSocket  {
-//        return try makeSocket(type: .router)
-//    }
 
+    // MARK: - Push/pull
+    public func pushSocket()  throws -> WriteableSocket {
+        return try makeSocket(type: .push)
+    }
+
+    public func pullSocket()  throws -> ReadableSocket {
+        return try makeSocket(type: .pull)
+    }
+
+    // MARK: - Dealer/router
+    public func dealerSocket() throws -> DealerSocket {
+        return try makeSocket(type: .dealer)
+    }
+
+    public func routerSocket() throws -> RouterSocket  {
+        return try makeSocket(type: .router)
+    }
 
     public func on(_ identifier: Data,
                    from socket: Socket,
