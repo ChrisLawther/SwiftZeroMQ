@@ -38,18 +38,15 @@ class MessageRouter {
         guard handler != nil else {
             // TODO: - Stop polling a socket once all message handlers for that socket
             //         have been removed
-            print("🧐 Message router DE-registering")
             return
         }
 
-        print("🧐 Message router registering socket for polling")
         poller.poll(socket: socket, flags: .pollIn) { [weak self] socket in
             try? self?.handleReadable(socket: socket)
         }
     }
 
     private func handleReadable(socket: Socket) throws {
-        print("🧐 Message router reading socket")
         let multipart = try socket.receiveMultipartMessage()
 
         guard !multipart.isEmpty else {
@@ -63,7 +60,6 @@ class MessageRouter {
                 return
             }
             try handler(Array(multipart.dropFirst()))
-            print("🧐 Message router called handler successfully")
         } catch {
             let idStr = String(data: identifier, encoding: .utf8) ?? identifier.prefix(8).map {
                 String(format: "%02hhx", $0)

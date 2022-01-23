@@ -71,7 +71,6 @@ extension SocketPoller {
             worker.asyncAfter(deadline: .now() + 0.1) {
                 self.pollAgainUnlessStopped()
             }
-            print("🧐 Poller had nothing to poll for")
             return
         }
 
@@ -83,8 +82,6 @@ extension SocketPoller {
                            events: pollable.flags.rawValue,
                            revents: 0)
         }
-
-        print("🧐 Poller polling \(pollItems.count) sockets")
 
         let pollResult = pollItems.withUnsafeMutableBufferPointer { ptr in
             zmq_poll(ptr.baseAddress, Int32(pollable.count), 1)
@@ -98,19 +95,16 @@ extension SocketPoller {
         for item in pollItems {
             let flags = PollingFlags(rawValue: item.revents)
             if flags.contains(.pollIn) {
-                print("🧐 Socket is readable")
                 if let readable = pollable[item.socket] {
                     readable.handler(readable.socket)
                 }
             }
             if flags.contains(.pollOut) {
-                print("🧐 Socket is writable")
                 if let writable = pollable[item.socket] {
                     writable.handler(writable.socket)
                 }
             }
             if flags.contains(.pollErr) {
-                print("🧐 Socket is errored")
                 if let errored = pollable[item.socket] {
                     errored.handler(errored.socket)
                 }

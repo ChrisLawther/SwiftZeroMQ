@@ -80,14 +80,12 @@ public final class ZMQ {
     public func on(_ identifier: Data,
                    from socket: Socket,
                    handler: @escaping ([Data]) -> Void) {
-        print("🧐 Context registering socket for identified response")
         router.on(identifier: identifier, from: socket, handler: handler)
     }
 
     public func on(_ flags: PollingFlags,
                    for socket: Socket,
                    handler: @escaping (Socket) -> Void) {
-        print("🧐 Context registering socket for polling")
         poller.poll(socket: socket, flags: flags, handler: handler)
     }
 

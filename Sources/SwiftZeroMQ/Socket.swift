@@ -45,12 +45,10 @@ extension ReadableSocket {
         guard let data = identifier.data(using: .utf8) else {
             throw ZMQError.stringCouldNotBeEncoded(identifier)
         }
-        print("🧐 Socket registering for identified response")
         on(data, handler: handler)
     }
 
     public func on<T: MessageIdentifiable>(_ type: T.Type = T.self, handler: @escaping (T) -> Void) throws -> Void {
-        print("🧐 Socket registering for typed-identified response")
         try on(type.identifier) { data in
             let message = T.init(data[0])
             handler(message)
