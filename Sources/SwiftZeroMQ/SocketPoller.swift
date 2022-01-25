@@ -34,10 +34,6 @@ class SocketPoller {
         self.worker = worker
 
         keepAlive = self
-
-        worker.async {
-            self.poll()
-        }
     }
 
     func poll(socket: Socket, flags: PollingFlags, handler: @escaping EventHandler) {
@@ -46,6 +42,15 @@ class SocketPoller {
         }
         worker.async {
             self.pollable[zmqSocket] = Pollable(socket: socket, flags: flags, handler: handler)
+        }
+    }
+
+    func stopPolling(socket: Socket) {
+        guard let zmqSocket = socket.socket else {
+            return
+        }
+        worker.async {
+            self.pollable[zmqSocket] = nil
         }
     }
 
@@ -61,16 +66,20 @@ class SocketPoller {
         let handler: EventHandler
     }
 
-    private var pollable = [UnsafeMutableRawPointer: Pollable]()
+    private var pollable = [UnsafeMutableRawPointer: Pollable]() {
+        didSet {
+            if oldValue.isEmpty && !pollable.isEmpty {
+                worker.async {
+                    self.poll()
+                }
+            }
+        }
+    }
 }
 
 extension SocketPoller {
     func poll() {
         guard !pollable.isEmpty else {
-            // Nothing to even try to poll, so don't immediately try again
-            worker.asyncAfter(deadline: .now() + 0.1) {
-                self.pollAgainUnlessStopped()
-            }
             return
         }
 
@@ -113,12 +122,13 @@ extension SocketPoller {
     }
 
     func pollAgainUnlessStopped() {
-        if pollMore {
-            worker.async {
-                self.poll()
-            }
-        } else {
+        guard pollMore else {
             keepAlive = nil
+            return
+        }
+
+        worker.async {
+            self.poll()
         }
     }
 }

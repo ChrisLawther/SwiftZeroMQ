@@ -11,9 +11,9 @@ class ImmediateRunner: Worker {
         guard count > 0 else {
             return print("Used-up, NOT fake aync()-ing")
         }
+        count -= 1
         print("fake aync()-ing")
         block()
-        count -= 1
     }
 
     func asyncAfter(deadline: DispatchTime, _ block: @escaping () -> Void) {
