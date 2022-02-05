@@ -1,4 +1,6 @@
 import Foundation
+
+#if !os(Linux)
 import os.log
 
 extension OSLog {
@@ -6,6 +8,7 @@ extension OSLog {
 
     static let messageRouting = OSLog(subsystem: subsystem, category: "messageRouting")
 }
+#endif
 
 public typealias MessageHandler = ([Data]) throws -> Void
 
@@ -61,11 +64,12 @@ class MessageRouter {
             }
             try handler(Array(multipart.dropFirst()))
         } catch {
+            #if !os(Linux)
             let idStr = String(data: identifier, encoding: .utf8) ?? identifier.prefix(8).map {
                 String(format: "%02hhx", $0)
             }.joined() + "..."
-
             os_log("Failed to route message id '%{public}@': %{public}@", log: .messageRouting, type: .info, idStr, error.localizedDescription)
+            #endif
         }
     }
 }

@@ -1,5 +1,7 @@
 import Foundation
 import CZeroMQ
+
+#if !os(Linux)
 import os.log
 
 extension OSLog {
@@ -7,6 +9,7 @@ extension OSLog {
 
     static let socketPolling = OSLog(subsystem: subsystem, category: "socketPolling")
 }
+#endif
 
 public protocol Worker {
     func async(_ block: @escaping () -> Void)
