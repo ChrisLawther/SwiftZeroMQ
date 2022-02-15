@@ -50,7 +50,7 @@ public final class ZMQ {
     }
 
     // MARK: - Pub/sub
-    public func publisherSocket()  throws -> WriteableSocket {
+    public func publisherSocket()  throws -> PublisherSocket {
         return try makeSocket(type: .publish)
     }
 

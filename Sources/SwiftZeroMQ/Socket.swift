@@ -239,6 +239,8 @@ extension Socket: WriteableSocket {
     }
 }
 
+extension Socket: PublisherSocket { }
+
 // MARK: - BindableSocket
 
 extension Socket: BindableSocket {
