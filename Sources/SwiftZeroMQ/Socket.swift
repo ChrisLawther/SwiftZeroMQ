@@ -104,7 +104,17 @@ public typealias DealerSocket = ReadableSocket & WriteableSocket
 public typealias RouterSocket = ReadableSocket & AddressableSocket
 
 public protocol SubscriberSocket: ReadableSocket {
-    func subscribe(to: String) throws
+    func subscribe(to: Data) throws
+}
+
+public extension SubscriberSocket {
+    func subscribe(to topic: String) throws {
+        guard let bytes = topic.data(using: .utf8) else {
+            // TODO: Throw "invalidTopicError" ?
+            return
+        }
+        try subscribe(to: bytes)
+    }
 }
 
 public extension SubscriberSocket {
@@ -274,17 +284,15 @@ extension Socket: ConnectableSocket {
 // MARK: - SubscriberSocket
 
 extension Socket: SubscriberSocket {
-    public func subscribe(to topic: String) throws {
+    public func subscribe(to topic: Data) throws {
         guard let socket = socket else {
             fatalError("Tried to connect from a non-existant socket")
         }
 
-        guard let bytes = topic.data(using: .utf8) else {
-            return
+        let result = topic.withUnsafeBytes { unsafeRawBufferPointer in
+            return zmq_setsockopt(socket, ZMQ_SUBSCRIBE, unsafeRawBufferPointer.baseAddress, topic.count)
         }
-        let result = bytes.withUnsafeBytes { unsafeRawBufferPointer in
-            return zmq_setsockopt(socket, ZMQ_SUBSCRIBE, unsafeRawBufferPointer.baseAddress, bytes.count)
-        }
+
         if result == -1 {
             throw ZMQError.lastError()
         }
