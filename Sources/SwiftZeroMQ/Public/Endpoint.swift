@@ -5,14 +5,6 @@ import Foundation
 //  * The primary address (IPv4 or IPv6) of the interface, in *numeric* form
 //  * The non-portable interface name as defined by the operating system (e.g. "eth0")
 
-
-/// <#Description#>
-/// - Parameter arg: <#arg description#>
-/// - Returns: <#description#>
-func wibble(_ arg: Int) -> Bool {
-    return true
-}
-
 /// Describes the supported connection endpoints
 public enum Endpoint {
     /// TCP, for communication between processes running on the same or different machines
